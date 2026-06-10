@@ -498,6 +498,8 @@ int main(int argc, char *argv[])
     printf("Program loaded.\n");
     printf("authenticated_area address: %p\n", (void *)authenticated_area);
     printf("dump_users address:        %p\n", (void *)dump_users);
+    printf("win_authenticated address: %p\n", (void *)win_authenticated);
+    printf("win_dump_users address:    %p\n", (void *)win_dump_users);
 
     // Main menu loop.  The loop continues until the user chooses option 6.
     while (1) {
