@@ -76,6 +76,16 @@ void authenticated_area()
     print_separator();
 }
 
+void win_authenticated() {
+    authenticated_area();
+    exit(0);
+}
+
+void win_dump_users() {
+    dump_users();
+    exit(0);
+}
+
 /*
     This function searches for a username inside the users file.
     Parameters:
@@ -200,14 +210,11 @@ void normal_login()
 /*
     Attack 1:
     Variable overflow.
-
     In this example, the password buffer and the authenticated variable
     are placed next to each other inside the same struct.
-
     The problem is that strcpy does not check the destination size.
     If the input is longer than the password buffer, it may continue
     writing into the next field in memory and change authenticated.
-
     This demonstrates why unsafe copying functions can be dangerous.
 */
 void variable_overflow_login()
@@ -253,56 +260,65 @@ void variable_overflow_login()
     Attack 2:
     Stack buffer overflow demonstration.
     This function has a local stack buffer with a fixed size of 64 bytes.
-    A long input is copied into it using strcpy.
-    Since strcpy does not limit the number of copied characters,
-    a long input can overwrite data that is stored after the buffer
-    on the stack.
+    A payload is copied into it using memcpy.
+    Since memcpy copies the number of bytes we give it,
+    a payload that is larger than the local buffer can overwrite
+    data that is stored after the buffer on the stack.
+    In this assignment, this vulnerability is used to demonstrate
+    how the saved return address can be overwritten and how the program
+    can be redirected to another function.
     This is only for learning purposes.
     In real code, this kind of copy should be avoided.
 */
-void return_address_vulnerable(char *input)
-{
+void return_address_vulnerable(unsigned char *input, size_t input_len) {
     char buffer[64];
 
     printf("\nInside vulnerable function.\n");
-
-    // Print the address of the local buffer. This helps show that local variables are stored in memory.
     printf("Local buffer address: %p\n", (void *)buffer);
+    printf("Buffer size: %zu bytes\n", sizeof(buffer));
+    printf("Payload size: %zu bytes\n", input_len);
 
-    // Vulnerable copy. There is no size check here, so input may be bigger than buffer.
-    
-    strcpy(buffer, input);
+    /*
+        Vulnerable copy:
+        memcpy copies input_len bytes into a 64 byte buffer.
+        If input_len is larger than 64, it may overwrite the saved return address.
+    */
+    memcpy(buffer, input, input_len);
 
-    // If the program flow was not damaged, the function will reach this print.
     printf("Function returned normally.\n");
 }
 
-/*
-    This function runs the return address overwrite demonstration.
-    It prints the addresses of important functions,
-    reads input from the user,
-    and sends the input to the vulnerable function.
-*/
-void return_address_demo()
-{
-    char input[512];
+void return_address_demo() {
+    unsigned char input[512];
+    char payload_path[256];
+    FILE *payload_file;
+    size_t bytes_read;
 
     printf("\nReturn address overwrite demo\n");
 
-    //Print function addresses for the assignment demonstration. This shows that functions also have addresses in memory.
     printf("Target function authenticated_area address: %p\n", (void *)authenticated_area);
-    printf("Target function dump_users address:        %p\n", (void *)dump_users);
+    printf("Target function dump_users address: %p\n", (void *)dump_users);
 
-    // Read a payload from the user.The input array is large, but later it is copied into a smaller buffer.
+    printf("Clean target win_authenticated address: %p\n", (void *)win_authenticated);
+    printf("Clean target win_dump_users address: %p\n", (void *)win_dump_users);
 
-    printf("Enter payload: ");
-    fgets(input, sizeof(input), stdin);
-    remove_newline(input);
+    printf("Enter payload file path: ");
+    fgets(payload_path, sizeof(payload_path), stdin);
+    remove_newline(payload_path);
 
-    // Send the input to the vulnerable function.
-    return_address_vulnerable(input);
+    payload_file = fopen(payload_path, "rb");
+    if (payload_file == NULL) {
+        printf("Could not open payload file.\n");
+        return;
+    }
+
+    bytes_read = fread(input, 1, sizeof(input), payload_file);
+    fclose(payload_file);
+
+    printf("Read %zu bytes from payload file.\n", bytes_read);
+
+    return_address_vulnerable(input, bytes_read);
 }
-
 /*
     Insecure password comparison.
     The comparison stops immediately when the first wrong character is found.
