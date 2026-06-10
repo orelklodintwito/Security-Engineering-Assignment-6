@@ -493,7 +493,7 @@ int main(int argc, char *argv[])
     if (handle_command_mode(argc, argv)) {
         return 0;
     }
-
+ 
     //Print basic information when the program starts. The addresses are printed for the assignment demonstration.
     printf("Program loaded.\n");
     printf("authenticated_area address: %p\n", (void *)authenticated_area);

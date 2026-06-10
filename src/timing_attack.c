@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
+ 
 #ifdef _WIN32
 #define popen _popen
-#define pclose _pclose
+#define pclose _pclose 
 #define SERVER_COMMAND "bin\\server.exe"
 #else
 #define SERVER_COMMAND "./bin/server"

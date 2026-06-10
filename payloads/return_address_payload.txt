@@ -6,7 +6,7 @@ This file is used for the second and third attacks in the assignment:
 
 The final payload is not hardcoded here because it depends on the current run,
 the compiler, the operating system, and the stack layout.
-
+  
 Relevant vulnerable function:
 return_address_vulnerable
 
