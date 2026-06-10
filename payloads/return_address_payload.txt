@@ -1,0 +1,52 @@
+Return Address Overwrite Payload Notes
+
+This file is used for the second and third attacks in the assignment:
+1. Bypassing the authentication step by overwriting the return address.
+2. Calling the hidden dump_users function by redirecting the program flow.
+
+The final payload is not hardcoded here because it depends on the current run,
+the compiler, the operating system, and the stack layout.
+
+Relevant vulnerable function:
+return_address_vulnerable
+
+Relevant vulnerable code:
+char buffer[64];
+strcpy(buffer, input);
+
+Problem:
+The buffer has a fixed size of 64 bytes.
+The program copies user input into the buffer using strcpy without checking the input length.
+If the input is longer than the buffer, it may overwrite stack data after the buffer.
+
+Targets:
+authenticated_area
+dump_users
+
+Example addresses printed by the program:
+authenticated_area address: 00000001400015ae
+dump_users address:        00000001400014de
+
+Important:
+These addresses may change between computers or builds.
+The real values should be taken from the program output and verified in the debugger.
+
+Payload idea:
+
+[padding bytes until saved return address][target function address]
+
+Where:
+padding bytes = bytes needed to reach the saved return address
+target function address = address of authenticated_area or dump_users
+
+For the video:
+1. Run the program in the debugger.
+2. Set a breakpoint inside return_address_vulnerable.
+3. Disassemble the function.
+4. Show the local buffer.
+5. Show the target function address.
+6. Explain that the payload is built from padding plus the target address.
+7. Demonstrate that changing the return address changes the program flow.
+
+This file is intentionally written as notes because the exact binary payload
+must be created according to the debugger results.
