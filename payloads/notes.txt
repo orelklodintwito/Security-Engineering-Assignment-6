@@ -1,0 +1,205 @@
+Security Engineering - Assignment 6
+Exploit Notes
+
+Project name:
+Vulnerable Login System
+
+Language:
+C only
+
+
+1. Regular system behavior
+
+The program implements a simple login system.
+
+The users are saved in:
+data/users.txt
+
+Each line in the file has this format:
+username:password
+
+Example:
+admin:secret
+
+The normal login flow is:
+1. The user enters a username.
+2. The user enters a password.
+3. The program searches for the username in the users file.
+4. If the username exists, the program compares the entered password with the saved password.
+5. If the passwords are equal, the user enters the protected area.
+6. If the password is wrong, the login fails.
+
+
+2. Hidden dump function
+
+The program contains a function named dump_users.
+
+This function opens the users file and prints all usernames and passwords.
+
+The function is not shown as a regular menu option.
+This is intentional, because a normal user should not be able to call this function.
+
+In this assignment, dump_users is used as an attack target.
+The goal is to show that even if a function is not exposed in the menu,
+it still exists in memory and can be reached if the attacker controls the program flow.
+
+
+3. Variable overflow attack
+
+Relevant vulnerable struct:
+
+struct LoginData {
+    char password[16];
+    int authenticated;
+};
+
+The password buffer has a size of 16 bytes.
+The authenticated variable is placed after the password buffer inside the same struct.
+
+Initial value:
+authenticated = 0
+
+Vulnerable line:
+strcpy(data.password, user_input);
+
+The problem:
+strcpy copies the input without checking the destination size.
+If the input is longer than 16 bytes, it continues writing after the password buffer.
+
+Payload:
+AAAAAAAAAAAAAAAAA
+
+Explanation:
+The first 16 A characters fill the password buffer.
+The 17th A overflows into the authenticated integer.
+The ASCII value of A is 65.
+Therefore, authenticated changes from 0 to 65.
+
+Since authenticated is now non-zero, the program enters the protected area
+without knowing the real password.
+
+Observed output:
+Before input: authenticated = 0
+After input: authenticated = 65
+Authentication passed.
+
+
+4. Return address overwrite attack
+
+Relevant vulnerable function:
+return_address_vulnerable
+
+The function contains a local stack buffer:
+
+char buffer[64];
+
+Vulnerable line:
+strcpy(buffer, input);
+
+The problem:
+The buffer has a fixed size of 64 bytes.
+The input is copied into the buffer without checking its size.
+A long input can overwrite data that is stored after the buffer on the stack.
+
+The assignment requires showing this part with a debugger.
+
+Important functions:
+authenticated_area
+dump_users
+
+The program prints their addresses when it starts.
+
+Example from one run:
+authenticated_area address: 00000001400015ae
+dump_users address:        00000001400014de
+
+The exact payload depends on:
+1. The offset from the start of the buffer to the saved return address.
+2. The target function address.
+3. The machine architecture and how the compiler arranges the stack.
+
+This part should be completed after checking the exact stack layout in the debugger.
+
+
+5. Timing attack
+
+The program contains an insecure password comparison function.
+
+Vulnerable idea:
+The password is compared character by character.
+If a wrong character is found, the function returns immediately.
+If a character is correct, the function waits for a short time using usleep.
+
+Because of that, guesses with a longer correct prefix take more time.
+
+Example:
+Guess: s
+Time: about 84039 microseconds
+
+Guess: se
+Time: about 176824 microseconds
+
+This shows that the second guess took more time,
+because it had more correct characters at the beginning.
+
+The timing attack program uses this idea to recover the password one character at a time.
+
+For each position:
+1. Try all possible characters.
+2. Measure the response time.
+3. Choose the character with the longest time.
+4. Add it to the recovered password prefix.
+5. Continue until the password is found.
+
+
+6. Debugger requirements for the video
+
+In the video, the following should be shown:
+
+Variable overflow:
+- Breakpoint inside variable_overflow_login
+- Disassemble the function
+- Show the struct fields
+- Show authenticated before and after the payload
+
+Return address overwrite:
+- Breakpoint inside return_address_vulnerable
+- Disassemble the function
+- Show the buffer address
+- Show the target function addresses
+- Explain how the payload is built according to the offset and target address
+
+Timing attack:
+- Show that different guesses take different times
+- Show that a longer correct prefix creates a longer response time
+- Run the timing_attack program and show the recovered password
+
+
+7. Compilation commands
+
+Compile the vulnerable server:
+
+gcc src/server.c -o bin/server -g -fno-stack-protector -no-pie
+
+Compile the timing attack program:
+
+gcc src/timing_attack.c -o bin/timing_attack -g
+
+
+8. Run commands
+
+Run the server normally:
+
+./bin/server
+
+Run one manual timing check:
+
+./bin/server timing admin s
+
+Run another manual timing check:
+
+./bin/server timing admin se
+
+Run the timing attack program:
+
+./bin/timing_attack
