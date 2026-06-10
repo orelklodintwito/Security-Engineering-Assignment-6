@@ -88,7 +88,7 @@ long average_timing_check(const char *username, const char *guess, int *result)
     *result = 0;
 
     for (i = 0; i < attempts; i++) {
-        current_time = run_timing_check(username, guess, &current_result);
+        current_time = run_timing_check(username, guess, &current_result); 
 
         if (current_time < 0) {
             return -1;
